@@ -181,5 +181,9 @@ void mx6_cpu_regulator_init(void)
 	 */
 	if (!IS_ERR(pu_regulator) && strcmp(pu_reg_id, "cpu_vddgpu"))
 		external_pureg = 1;
+
+#if defined(CONFIG_IPIPE) && defined(CONFIG_SMP)
+	ipipe_twd_update_freq();
+#endif /* CONFIG_IPIPE && CONFIG_SMP */
 }
 

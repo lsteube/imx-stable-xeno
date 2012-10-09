@@ -277,6 +277,14 @@ static void *swap_buffer(void *bufaddr, int len)
 	return bufaddr;
 }
 
+static inline unsigned short bufdesc_read_status(struct bufdesc *bdp)
+{
+#ifdef CONFIG_ARCH_MX6
+	mb();
+#endif /* CONFIG_ARCH_MX6 */
+	return bdp->cbd_sc;
+}
+
 static netdev_tx_t
 fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
@@ -300,7 +308,7 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	/* Fill in a Tx ring entry */
 	bdp = fep->cur_tx;
 
-	status = bdp->cbd_sc;
+	status = bufdesc_read_status(bdp);
 
 	if (status & BD_ENET_TX_READY) {
 		/* Ooops.  All transmit buffers are full.  Bail out.
@@ -444,7 +452,7 @@ fec_enet_tx(struct net_device *ndev)
 	spin_lock(&fep->hw_lock);
 	bdp = fep->dirty_tx;
 
-	while (((status = bdp->cbd_sc) & BD_ENET_TX_READY) == 0) {
+	while (((status = bufdesc_read_status(bdp)) & BD_ENET_TX_READY) == 0) {
 		if (bdp == fep->cur_tx && fep->tx_full == 0)
 			break;
 
@@ -547,7 +555,7 @@ static int fec_rx_poll(struct napi_struct *napi, int budget)
 	 */
 	bdp = fep->cur_rx;
 
-	while (!((status = bdp->cbd_sc) & BD_ENET_RX_EMPTY)) {
+	while (!((status = bufdesc_read_status(bdp)) & BD_ENET_RX_EMPTY)) {
 		if (pkt_received >= budget)
 			break;
 		pkt_received++;
@@ -685,7 +693,7 @@ fec_enet_rx(struct net_device *ndev)
 	 */
 	bdp = fep->cur_rx;
 
-	while (!((status = bdp->cbd_sc) & BD_ENET_RX_EMPTY)) {
+	while (!((status = bufdesc_read_status(bdp)) & BD_ENET_RX_EMPTY)) {
 
 		/* Since we have allocated space to hold a complete frame,
 		 * the last indicator should be set.
